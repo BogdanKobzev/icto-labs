@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Планетарна модель атома літію з AR</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  </head>
+  <body>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+      <!-- Маркер для прив’язки сцени -->
+      <a-marker type="pattern" url="../assets/pattern-letterA.patt">
+        <!-- Ядро атома з текстурою -->
+        <a-sphere
+          position="0 0 0"
+          radius="0.01"
+          material="src: ../assets/disturb.jpg; repeat: 2 2;"
+          segments-height="32"
+          segments-width="64"
+          color="#FFD700"
+        ></a-sphere>
+
+        <!-- Перша орбіта: XY-площина (z=0), радіус 0.1 -->
+        <a-torus
+          position="0 0 0"
+          radius="0.1"
+          radius-tubular="0.001"
+          rotation="0 0 0"
+          material="color: #00FFFF; opacity: 0.5"
+        ></a-torus>
+        <a-entity
+          position="0 0 0"
+          rotation="0 0 0"
+          animation="property: rotation.z; from: 0; to: 360; dur: 2000; easing: linear; loop: true"
+        >
+          <a-sphere
+            position="0.1 0 0"
+            radius="0.005"
+            segments-height="16"
+            segments-width="32"
+            material="color: #FF0000"
+          ></a-sphere>
+        </a-entity>
+
+        <!-- Друга орбіта: YZ-площина (x=0), радіус 0.5 -->
+        <a-torus
+          position="0 0 0"
+          radius="0.5"
+          radius-tubular="0.001"
+          rotation="0 90 0"
+          material="color: #00FF00; opacity: 0.5"
+        ></a-torus>
+        <a-entity
+          position="0 0 0"
+          rotation="0 90 0"
+          animation="property: rotation.x; from: 0; to: 360; dur: 3000; easing: linear; loop: true"
+        >
+          <a-sphere
+            position="0 0 0.5"
+            radius="0.005"
+            segments-height="16"
+            segments-width="32"
+            material="color: #FF0000"
+          ></a-sphere>
+        </a-entity>
+
+        <!-- Третя орбіта: XZ-площина (y=0), радіус 1.0 -->
+        <a-torus
+          position="0 0 0"
+          radius="1.0"
+          radius-tubular="0.001"
+          rotation="270 0 0"
+          material="color: #0000FF; opacity: 0.5"
+        ></a-torus>
+        <a-entity
+          position="0 0 0"
+          rotation="270 0 0"
+          animation="property: rotation.y; from: 0; to: 360; dur: 4000; easing: linear; loop: true"
+        >
+          <a-sphere
+            position="1.0 0 0"
+            radius="0.005"
+            segments-height="16"
+            segments-width="32"
+            material="color: #FF0000"
+          ></a-sphere>
+        </a-entity>
+      </a-marker>
+
+      <!-- Камера для AR -->
+      <a-entity camera arjs-look-controls></a-entity>
+    </a-scene>
+  </body>
+</html>
