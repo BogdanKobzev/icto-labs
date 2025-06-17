@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Планетарна модель атома літію з AR (MindAR)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #ar-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.141.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.141.0/examples/jsm/",
+        "mind-ar": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="ar-container"></div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { MindARThree } from 'mind-ar';
+
+    const mindarThree = new MindARThree({
+      container: document.getElementById('ar-container'),
+      imageTargetSrc: '../assets/pattern-letterA.mind',
+    });
+
+    const { renderer, scene, camera } = mindarThree;
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const anchor = mindarThree.addAnchor(0);
+
+    // Ядро атома з текстурою
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.setCrossOrigin('anonymous');
+    const nucleusGeometry = new THREE.SphereGeometry(0.01, 32, 64);
+    let nucleus;
+    textureLoader.load(
+      '../assets/disturb.jpg',
+      (texture) => {
+        texture.colorSpace = 'srgb';
+        const nucleusMaterial = new THREE.MeshStandardMaterial({ map: texture });
+        nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+        anchor.group.add(nucleus);
+        console.log('Nucleus texture loaded successfully');
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading nucleus texture:', error);
+      }
+    );
+
+    // Орбіти (Тороїди)
+    const torus1Geometry = new THREE.TorusGeometry(0.1, 0.001, 8, 64);
+    const torus1Material = new THREE.MeshStandardMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.5 });
+    const torus1 = new THREE.Mesh(torus1Geometry, torus1Material);
+    anchor.group.add(torus1);
+
+    const torus2Geometry = new THREE.TorusGeometry(0.5, 0.001, 8, 64);
+    const torus2Material = new THREE.MeshStandardMaterial({ color: 0x00FF00, transparent: true, opacity: 0.5 });
+    const torus2 = new THREE.Mesh(torus2Geometry, torus2Material);
+    torus2.rotation.set(0, Math.PI / 2, 0);
+    anchor.group.add(torus2);
+
+    const torus3Geometry = new THREE.TorusGeometry(1.0, 0.001, 8, 64);
+    const torus3Material = new THREE.MeshStandardMaterial({ color: 0x0000FF, transparent: true, opacity: 0.5 });
+    const torus3 = new THREE.Mesh(torus3Geometry, torus3Material);
+    torus3.rotation.set(Math.PI * 3 / 2, 0, 0);
+    anchor.group.add(torus3);
+
+    // Перша орбіта: XY-площина (z=0), радіус 0.1
+    const electron1Geometry = new THREE.SphereGeometry(0.005, 16, 32);
+    let electron1Orbit = new THREE.Group();
+    electron1Orbit.position.set(0, 0, 0);
+    const electron1 = new THREE.Mesh(electron1Geometry, new THREE.MeshStandardMaterial({ color: 0xFF0000 }));
+    electron1.position.set(0.1, 0, 0);
+    electron1Orbit.add(electron1);
+    anchor.group.add(electron1Orbit);
+
+    // Друга орбіта: YZ-площина (x=0), радіус 0.5
+    const electron2Geometry = new THREE.SphereGeometry(0.005, 16, 32);
+    let electron2Orbit = new THREE.Group();
+    electron2Orbit.position.set(0, 0, 0);
+    electron2Orbit.rotation.set(0, Math.PI / 2, 0);
+    const electron2 = new THREE.Mesh(electron2Geometry, new THREE.MeshStandardMaterial({ color: 0xFF0000 }));
+    electron2.position.set(0, 0, 0.5);
+    electron2Orbit.add(electron2);
+    anchor.group.add(electron2Orbit);
+
+    // Третя орбіта: XZ-площина (y=0), радіус 1.0
+    const electron3Geometry = new THREE.SphereGeometry(0.005, 16, 32);
+    let electron3Orbit = new THREE.Group();
+    electron3Orbit.position.set(0, 0, 0);
+    electron3Orbit.rotation.set(Math.PI * 3 / 2, 0, 0);
+    const electron3 = new THREE.Mesh(electron3Geometry, new THREE.MeshStandardMaterial({ color: 0xFF0000 }));
+    electron3.position.set(1.0, 0, 0);
+    electron3Orbit.add(electron3);
+    anchor.group.add(electron3Orbit);
+
+    // Освітлення
+    const pointLight = new THREE.PointLight(0xffffff, 1.5, 100);
+    pointLight.position.set(0, 0, 0);
+    anchor.group.add(pointLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    // Анімація
+    const clock = new THREE.Clock();
+    const animate = () => {
+      const elapsedTime = clock.getElapsedTime();
+      if (electron1Orbit) electron1Orbit.rotation.z = (2 * Math.PI * elapsedTime) / (2000 / 1000); // 2000 ms period
+      if (electron2Orbit) electron2Orbit.rotation.x = (2 * Math.PI * elapsedTime) / (3000 / 1000); // 3000 ms period
+      if (electron3Orbit) electron3Orbit.rotation.y = (2 * Math.PI * elapsedTime) / (4000 / 1000); // 4000 ms period
+      renderer.render(scene, camera);
+    };
+    renderer.setAnimationLoop(animate);
+
+    // Запуск MindAR
+    mindarThree.start().then(() => {
+      console.log('MindAR started');
+    });
+
+    // Обробка зміни розміру вікна
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
