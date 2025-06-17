@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Планетарна модель атома літію з WebXR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #ar-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+    #ar-button {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.141.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.141.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="ar-container"></div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { ARButton } from 'three/addons/webxr/ARButton.js';
+
+    // Initialize renderer with WebXR support
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.getElementById('ar-container').appendChild(renderer.domElement);
+
+    // Add AR button
+    document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+
+    // Scene and camera
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+    // Texture Loader
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.setCrossOrigin('anonymous');
+
+    // Group for atom components
+    const group = new THREE.Group();
+
+    // Nucleus
+    const nucleusGeometry = new THREE.SphereGeometry(0.01, 32, 64);
+    let nucleus;
+    textureLoader.load(
+      '../assets/disturb.jpg',
+      (texture) => {
+        texture.colorSpace = 'srgb';
+        const nucleusMaterial = new THREE.MeshStandardMaterial({ map: texture });
+        nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+        nucleus.position.set(0, 0, 0);
+        group.add(nucleus);
+        console.log('Nucleus texture loaded successfully');
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading nucleus texture:', error);
+      }
+    );
+
+    // Orbits (Tori)
+    const torus1Geometry = new THREE.TorusGeometry(0.1, 0.001, 8, 64);
+    const torus1Material = new THREE.MeshStandardMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.5 });
+    const torus1 = new THREE.Mesh(torus1Geometry, torus1Material);
+    group.add(torus1);
+
+    const torus2Geometry = new THREE.TorusGeometry(0.5, 0.001, 8, 64);
+    const torus2Material = new THREE.MeshStandardMaterial({ color: 0x00FF00, transparent: true, opacity: 0.5 });
+    const torus2 = new THREE.Mesh(torus2Geometry, torus2Material);
+    torus2.rotation.set(0, Math.PI / 2, 0);
+    group.add(torus2);
+
+    const torus3Geometry = new THREE.TorusGeometry(1.0, 0.001, 8, 64);
+    const torus3Material = new THREE.MeshStandardMaterial({ color: 0x0000FF, transparent: true, opacity: 0.5 });
+    const torus3 = new THREE.Mesh(torus3Geometry, torus3Material);
+    torus3.rotation.set(Math.PI * 3 / 2, 0, 0);
+    group.add(torus3);
+
+    // Electrons
+    const electronGeometry = new THREE.SphereGeometry(0.005, 16, 32);
+    const electronMaterial = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
+
+    const electron1Orbit = new THREE.Group();
+    electron1Orbit.position.set(0, 0, 0);
+    const electron1 = new THREE.Mesh(electronGeometry, electronMaterial);
+    electron1.position.set(0.1, 0, 0);
+    electron1Orbit.add(electron1);
+    group.add(electron1Orbit);
+
+    const electron2Orbit = new THREE.Group();
+    electron2Orbit.position.set(0, 0, 0);
+    electron2Orbit.rotation.set(0, Math.PI / 2, 0);
+    const electron2 = new THREE.Mesh(electronGeometry, electronMaterial);
+    electron2.position.set(0, 0, 0.5);
+    electron2Orbit.add(electron2);
+    group.add(electron2Orbit);
+
+    const electron3Orbit = new THREE.Group();
+    electron3Orbit.position.set(0, 0, 0);
+    electron3Orbit.rotation.set(Math.PI * 3 / 2, 0, 0);
+    const electron3 = new THREE.Mesh(electronGeometry, electronMaterial);
+    electron3.position.set(1.0, 0, 0);
+    electron3Orbit.add(electron3);
+    group.add(electron3Orbit);
+
+    // Lighting
+    const pointLight = new THREE.PointLight(0xffffff, 1.5, 10);
+    pointLight.position.set(5, 5, 5);
+    scene.add(pointLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    // Hit-test setup for WebXR
+    let hitTestSource = null;
+    let hitTestSourceRequested = false;
+    renderer.xr.addEventListener('sessionstart', async () => {
+      const session = renderer.xr.getSession();
+      const viewerReferenceSpace = await session.requestReferenceSpace('viewer');
+      hitTestSource = await session.requestHitTestSource({ space: viewerReferenceSpace });
+      hitTestSourceRequested = true;
+      // Set initial group position
+      group.position.set(0, 0, -2); // Start 2m in front of camera
+      scene.add(group);
+      console.log('WebXR session started with hit-test');
+    });
+
+    // Animation
+    const clock = new THREE.Clock();
+    let animationStart = null;
+    const animate = () => {
+      const elapsedTime = clock.getElapsedTime();
+      if (hitTestSourceRequested && hitTestSource) {
+        const session = renderer.xr.getSession();
+        if (session) {
+          const frame = renderer.xr.getFrame();
+          const hitTestResults = frame.getHitTestResults(hitTestSource);
+          if (hitTestResults.length > 0) {
+            const hit = hitTestResults[0];
+            const pose = hit.getPose(renderer.xr.getReferenceSpace());
+            group.position.setFromMatrixPosition(new THREE.Matrix4().fromArray(pose.transform.matrix));
+          }
+        }
+      }
+      // Electron animation
+      if (animationStart === null) animationStart = elapsedTime;
+      const t = elapsedTime - animationStart;
+      electron1Orbit.rotation.z = (2 * Math.PI * t) / (2000 / 1000); // 2000 ms period
+      electron2Orbit.rotation.x = (2 * Math.PI * t) / (3000 / 1000); // 3000 ms period
+      electron3Orbit.rotation.y = (2 * Math.PI * t) / (4000 / 1000); // 4000 ms period
+      renderer.render(scene, camera);
+    };
+
+    // WebXR render loop
+    renderer.setAnimationLoop(() => {
+      animate();
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
